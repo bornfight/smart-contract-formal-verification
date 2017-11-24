@@ -11,6 +11,11 @@ contract("Cashout", function(accounts) {
     });
     
     it("Test claimAll() when not owner", async function() {
-        
+        try {
+            let result = cashoutContract.claimAll({from:accounts[1]});       
+            assert.fail();
+        } catch(ex) {
+            //this is expected
+        }
     });
 });
