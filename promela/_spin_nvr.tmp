@@ -1,0 +1,9 @@
+never p1 {    /* !([] ((contractBalance>=0))) */
+T0_init:
+	do
+	:: atomic { (! (((contractBalance>=0)))) -> assert(!(! (((contractBalance>=0))))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}

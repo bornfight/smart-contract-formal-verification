@@ -1,12 +1,17 @@
-#define p       (contractBalance >= 0)
+#define p (contractBalance >= 0)
 ltl p1 {always p}
 
-mtype = {REQ, CLM, DEP}
+#define N 5
+#define WITHDRAW_AMOUNT 5
+#define DEPOSIT_AMOUNT 1
+
+mtype = {WTH, DEP, CLM}
 int ownerPid
 
 int contractBalance
-int balances[5] = {0}
-int allowance[5] = {0}
+int contractAllowance = 100
+int balances[N + 1]
+int userAllowances[N + 1]
 
 #define currentBalance balances[_pid]
 
@@ -18,15 +23,15 @@ proctype user(chan channel; int balance)
     currentBalance = balance;
     do
       :: skip ->
-        channel!REQ,requestChannel
+        channel!WTH,requestChannel
         oldBalance = currentBalance
         oldContractBalance = contractBalance;
-        requestChannel!1,_pid
+        requestChannel!WITHDRAW_AMOUNT,_pid
         requestChannel?status,0
         if 
           :: status == 0 -> 
-            assert(oldBalance + 1 == currentBalance)
-            assert(contractBalance == oldContractBalance - 1)
+            assert(oldBalance + WITHDRAW_AMOUNT == currentBalance)
+            assert(contractBalance == oldContractBalance - WITHDRAW_AMOUNT)
           :: status == 1 -> 
             assert(oldBalance == currentBalance)
             assert(contractBalance == oldContractBalance)
@@ -35,17 +40,16 @@ proctype user(chan channel; int balance)
         channel!DEP,depositChannel
         oldBalance = currentBalance
         oldContractBalance = contractBalance;
-        depositChannel!1,_pid
+        depositChannel!DEPOSIT_AMOUNT,_pid
         depositChannel?status,0
         if
           :: status == 0 -> 
-            assert(currentBalance == oldBalance - 1)
-            assert(contractBalance == oldContractBalance + 1)
+            assert(currentBalance == oldBalance - DEPOSIT_AMOUNT)
+            assert(contractBalance == oldContractBalance + DEPOSIT_AMOUNT)
           :: else -> 
             assert(currentBalance == oldBalance)
             assert(contractBalance == oldContractBalance)
         fi
-      :: currentBalance >= 2 -> break
     od
 }
 
@@ -55,7 +59,7 @@ proctype contract(chan channel; int balance)
     int amount, mpid;
     contractBalance = balance
     do
-      :: channel?REQ,secondaryChannel ->
+      :: channel?WTH,secondaryChannel ->
         secondaryChannel?amount,mpid
         if
           :: contractBalance >= amount -> 
@@ -65,7 +69,7 @@ proctype contract(chan channel; int balance)
           :: else -> 
             secondaryChannel!1,0
         fi
-        :: channel?DEP,secondaryChannel -> 
+      :: channel?DEP,secondaryChannel -> 
           secondaryChannel?amount,mpid
           if
             :: balances[mpid] >= amount ->
@@ -80,15 +84,8 @@ proctype contract(chan channel; int balance)
 init {
     chan channel = [0] of {mtype, chan};
     atomic {
-        run contract(channel, 1000);
+        run contract(channel, 0);
         ownerPid = run user(channel, 100);
         run user(channel, 0);
     }
-}
-never  {    /* []p */
-accept_init:
-T0_init:
-	do
-	:: ((p)) -> goto T0_init
-	od;
 }
