@@ -1,7 +1,7 @@
-never p1 {    /* !([] ((contractBalance>=0))) */
+never p1 {    /* !([] ((userRealBalance<=(0+10)))) */
 T0_init:
 	do
-	:: atomic { (! (((contractBalance>=0)))) -> assert(!(! (((contractBalance>=0))))) }
+	:: atomic { (! (((userRealBalance<=(0+10))))) -> assert(!(! (((userRealBalance<=(0+10)))))) }
 	:: (1) -> goto T0_init
 	od;
 accept_all:
